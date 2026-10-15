@@ -6,84 +6,107 @@ public class Enemy : MonoBehaviour
     // Enemy health
     public int health = 3;
 
-    // Enemy movement speed
-    public float moveSpeed = 2f;
-
-    // Distance at which the enemy stops moving
-    public float stopDistance = 1.3f;
-
-    // Reference to the player
+    // Reference to Player
     public Transform player;
 
-    // Enemy physics component
-    Rigidbody2D rb;
+    // Enemy bullet prefab
+    public GameObject enemyBulletPrefab;
 
-    // Runs once when the game starts
+    // Time between shots
+    public float shootInterval = 2f;
+
+    // Maximum shooting distance
+    public float shootRange = 8f;
+
+    // Shooting timer
+    float shootTimer = 0f;
 
     void Start()
     {
-        // Get the Rigidbody2D component
-        rb = GetComponent<Rigidbody2D>();
-
-        // Find the Player using its tag
+        // Find Player using the Player tag
         GameObject playerObject =
             GameObject.FindGameObjectWithTag("Player");
 
-        // Check if the Player was found
         if (playerObject != null)
         {
-            // Save the Player's Transform
             player = playerObject.transform;
-
-            Debug.Log("Enemy found Player!");
-        }
-        else
-        {
-            Debug.Log("Enemy cannot find Player!");
         }
     }
 
-    // Runs at a fixed interval for physics
-    void FixedUpdate()
+    void Update()
     {
-        // Stop if the player is not assigned
+        // Stop if Player does not exist
         if (player == null)
         {
             return;
         }
 
-        // Calculate the distance to the player
-        float distance = player.position.x - transform.position.x;
+        // Calculate horizontal distance to Player
+        float distance =
+            player.position.x - transform.position.x;
 
-        // Default: enemy does not move
-        float move = 0;
-
-        // Player is on the right
-        if (distance > stopDistance)
+        // Check if Player is within shooting range
+        if (Mathf.Abs(distance) <= shootRange)
         {
-            move = 1;
-        }
-        // Player is on the left
-        else if (distance < -stopDistance)
-        {
-            move = -1;
-        }
+            // Count time
+            shootTimer = shootTimer + Time.deltaTime;
 
-        // Move left or right
-        // Keep the current vertical speed
-        rb.linearVelocity = new Vector2(
-            move * moveSpeed,
-            rb.linearVelocity.y
-        );
+            // Shoot every 2 seconds
+            if (shootTimer >= shootInterval)
+            {
+                Shoot();
+
+                // Reset timer
+                shootTimer = 0f;
+            }
+        }
+        else
+        {
+            // Reset timer when Player leaves range
+            shootTimer = 0f;
+        }
     }
 
-    // Called when the enemy takes damage
+    // Create a bullet and shoot toward Player
+    void Shoot()
+    {
+        // Default direction is right
+        int direction = 1;
+
+        // If Player is on the left, shoot left
+        if (player.position.x < transform.position.x)
+        {
+            direction = -1;
+        }
+
+        // Set bullet spawn position
+        Vector3 spawnPosition = new Vector3(
+            transform.position.x + direction * 0.8f,
+            transform.position.y,
+            0
+        );
+
+        // Create enemy bullet
+        GameObject newBullet = Instantiate(
+            enemyBulletPrefab,
+            spawnPosition,
+            Quaternion.identity
+        );
+
+        // Get EnemyBullet script
+        EnemyBullet bulletScript =
+            newBullet.GetComponent<EnemyBullet>();
+
+        // Set bullet direction
+        bulletScript.SetDirection(direction);
+    }
+
+    // Called when enemy takes damage
     public void TakeDamage(int damage)
     {
-        // Reduce health
+        // Reduce enemy health
         health = health - damage;
 
-        // Print remaining health
         Debug.Log("Enemy HP: " + health);
 
         // Check if enemy is dead
@@ -93,9 +116,20 @@ public class Enemy : MonoBehaviour
         }
     }
 
-    // Destroy the enemy
+    // Called when enemy dies
     void Die()
     {
+        // Find ScoreManager
+        ScoreManager scoreManager =
+            FindFirstObjectByType<ScoreManager>();
+
+        // Add score if ScoreManager exists
+        if (scoreManager != null)
+        {
+            scoreManager.AddScore(100);
+        }
+
+        // Destroy enemy
         Destroy(gameObject);
     }
 }

@@ -4,56 +4,69 @@ using System.Collections.Generic;
 
 public class EnemySpawner : MonoBehaviour
 {
-    // Enemy prefab to spawn
+    // Enemy prefab
     public GameObject enemyPrefab;
 
-    // Time between enemy spawns
-    public float spawnInterval = 3f;
+    // Reference to Player
+    public Transform player;
 
-    // Timer
-    float timer = 0f;
+    // Distance before enemy appears
+    public float spawnDistance = 7f;
 
-    // Queue stores the spawn directions
-    // -1 = left, 1 = right
-    Queue<int> spawnQueue = new Queue<int>();
+    // Queue stores enemy spawn positions
+    Queue<float> spawnQueue = new Queue<float>();
 
     void Start()
     {
-        // Add spawn directions to the queue
-        spawnQueue.Enqueue(-1);
-        spawnQueue.Enqueue(1);
+        // Find Player using its tag
+        GameObject playerObject =
+            GameObject.FindGameObjectWithTag("Player");
+
+        if (playerObject != null)
+        {
+            player = playerObject.transform;
+        }
+
+        // Add enemy positions to the queue
+        spawnQueue.Enqueue(10f);
+        spawnQueue.Enqueue(18f);
+        spawnQueue.Enqueue(26f);
     }
 
     void Update()
     {
-        // Count the time since the last spawn
-        timer = timer + Time.deltaTime;
-
-        // Check if 3 seconds have passed
-        if (timer >= spawnInterval)
+        // Stop if Player is missing
+        if (player == null)
         {
-            // Reset the timer
-            timer = 0f;
+            return;
+        }
 
-            // Get the next spawn direction
-            int side = spawnQueue.Dequeue();
+        // Check if there are enemies left to spawn
+        if (spawnQueue.Count > 0)
+        {
+            // Look at the next spawn position
+            float nextPosition = spawnQueue.Peek();
 
-            // Choose left or right spawn position
-            Vector3 spawnPosition = new Vector3(
-                side * 7f,
-                -2.25f,
-                0f
-            );
+            // Check if Player is close enough
+            if (player.position.x >= nextPosition - spawnDistance)
+            {
+                // Remove the position from the queue
+                float spawnX = spawnQueue.Dequeue();
 
-            // Create a new enemy
-            Instantiate(
-                enemyPrefab,
-                spawnPosition,
-                Quaternion.identity
-            );
+                // Set enemy spawn position
+                Vector3 spawnPosition = new Vector3(
+                    spawnX,
+                    -2.25f,
+                    0f
+                );
 
-            // Put the direction back into the queue
-            spawnQueue.Enqueue(side);
+                // Create the enemy
+                Instantiate(
+                    enemyPrefab,
+                    spawnPosition,
+                    Quaternion.identity
+                );
+            }
         }
     }
 }
